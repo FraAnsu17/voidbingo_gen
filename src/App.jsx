@@ -3,7 +3,7 @@ import JSZip from "jszip";
 
 const DEFAULT_BG = "#FFE4E1";
 const DEFAULT_FG = "#1a1a1a";
-const DEFAULT_FONT_SIZE = 48;
+const DEFAULT_FONT_SIZE = 72;
 const CANVAS_SIZE = 1080;
 
 // Aspetta che tutti i font CSS (incluso DM Sans da Google Fonts in index.html)
@@ -45,7 +45,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
   if (currentLine) lines.push(currentLine);
 
   // Auto-shrink se il testo è troppo lungo
-  const lineHeight = fontSize * 1.5;
+  const lineHeight = fontSize * 1.2;
   const totalTextHeight = lines.length * lineHeight;
   const availableHeight = CANVAS_SIZE - padding * 2;
   let adjFontSize = fontSize;
@@ -55,7 +55,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
     ctx.font = `${bold ? "700 " : ""}${adjFontSize}px ${fontStack}`;
   }
 
-  const adjLineH = adjFontSize * 1.5;
+  const adjLineH = adjFontSize * 1.2;
   const totalH = lines.length * adjLineH;
   const startY = (CANVAS_SIZE - totalH) / 2 + adjLineH / 2;
 
