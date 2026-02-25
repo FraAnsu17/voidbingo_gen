@@ -236,9 +236,18 @@ export default function App() {
         }
 
         @media (max-width: 900px) {
-          .layout { grid-template-columns: 1fr; }
-          .controls { position: static; }
-          .preview-section { order: 2; }
+          .layout {
+            grid-template-columns: 1fr;
+            display: flex;
+            flex-direction: column;
+          }
+          .controls {
+            position: static !important;
+            order: 1;
+          }
+          .preview-section {
+            order: 2;
+          }
         }
 
         .controls {
