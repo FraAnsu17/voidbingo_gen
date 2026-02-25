@@ -112,6 +112,23 @@ export default function App() {
     setSlides((prev) => prev.map((s) => (s.id === id ? { ...s, text } : s)));
   };
 
+  // Genera i blob delle immagini
+  const generateBlobs = async (filledSlides) => {
+    await ensureFontLoaded();
+    const blobs = [];
+    for (let idx = 0; idx < filledSlides.length; idx++) {
+      const slide = filledSlides[idx];
+      const canvas = document.createElement("canvas");
+      canvas.width = CANVAS_SIZE;
+      canvas.height = CANVAS_SIZE;
+      const ctx = canvas.getContext("2d");
+      drawSlideOnCanvas(ctx, slide.text, bgColor, fgColor, fontSize, bold);
+      const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.95));
+      blobs.push(blob);
+    }
+    return blobs;
+  };
+
   const generateAndDownload = useCallback(async () => {
     const filledSlides = slides.filter((s) => s.text.trim());
     if (filledSlides.length === 0) {
@@ -123,22 +140,31 @@ export default function App() {
     setStatus("Generazione in corso...");
 
     try {
-      await ensureFontLoaded();
-      const zip = new JSZip();
-
-      for (let idx = 0; idx < filledSlides.length; idx++) {
-        const slide = filledSlides[idx];
-        const canvas = document.createElement("canvas");
-        canvas.width = CANVAS_SIZE;
-        canvas.height = CANVAS_SIZE;
-        const ctx = canvas.getContext("2d");
-        drawSlideOnCanvas(ctx, slide.text, bgColor, fgColor, fontSize, bold);
-
-        const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.95));
+      const blobs = await generateBlobs(filledSlides);
+      const files = blobs.map((blob, idx) => {
         const num = String(idx + 1).padStart(2, "0");
-        zip.file(`slide_${num}.jpg`, blob);
+        return new File([blob], `slide_${num}.jpg`, { type: "image/jpeg" });
+      });
+
+      // Web Share API: su Safari iOS bisogna chiamare share() subito,
+      // senza altri await tra la generazione e la chiamata
+      const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+      const supportsFileShare = navigator.share && navigator.canShare && navigator.canShare({ files });
+
+      if (supportsFileShare) {
+        // Su iOS passiamo solo i file senza title/text per massima compatibilità
+        const sharePayload = isIOS ? { files } : { files, title: "Carosello Instagram" };
+        await navigator.share(sharePayload);
+        setStatus(`✓ ${filledSlides.length} slide condivise!`);
+        return;
       }
 
+      // Fallback: ZIP per desktop o browser senza Web Share API
+      const zip = new JSZip();
+      blobs.forEach((blob, idx) => {
+        const num = String(idx + 1).padStart(2, "0");
+        zip.file(`slide_${num}.jpg`, blob);
+      });
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const url = URL.createObjectURL(zipBlob);
       const a = document.createElement("a");
@@ -146,16 +172,20 @@ export default function App() {
       a.download = "carosello_ig.zip";
       a.click();
       URL.revokeObjectURL(url);
-
       setStatus(`✓ ${filledSlides.length} slide scaricate!`);
+
     } catch (err) {
-      console.error(err);
-      setStatus("Errore durante la generazione. Riprova.");
+      if (err.name === "AbortError") {
+        setStatus("Condivisione annullata.");
+      } else {
+        console.error(err);
+        setStatus("Errore durante la generazione. Riprova.");
+      }
     } finally {
       setIsGenerating(false);
       setTimeout(() => setStatus(""), 4000);
     }
-  }, [slides, bgColor, fgColor, fontSize]);
+  }, [slides, bgColor, fgColor, fontSize, bold]);
 
   const filledCount = slides.filter((s) => s.text.trim()).length;
 
@@ -207,6 +237,8 @@ export default function App() {
 
         @media (max-width: 900px) {
           .layout { grid-template-columns: 1fr; }
+          .controls { position: static; }
+          .preview-section { order: 2; }
         }
 
         .controls {
@@ -216,6 +248,10 @@ export default function App() {
           padding: 28px;
           position: sticky;
           top: 24px;
+        }
+
+        .preview-section {
+          min-width: 0;
         }
 
         .section-title {
@@ -644,7 +680,12 @@ export default function App() {
               onClick={generateAndDownload}
               disabled={isGenerating || filledCount === 0}
             >
-              {isGenerating ? "Generazione..." : `↓ Scarica ${filledCount > 0 ? filledCount : ""} slide`}
+              {isGenerating
+                ? "Generazione..."
+                : navigator.share
+                  ? `↑ Condividi ${filledCount > 0 ? filledCount : ""} slide`
+                  : `↓ Scarica ${filledCount > 0 ? filledCount : ""} slide`
+              }
             </button>
             <div className={`status ${status.startsWith("✓") ? "success" : ""}`}>{status}</div>
           </div>
