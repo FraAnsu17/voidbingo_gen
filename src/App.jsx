@@ -3,7 +3,7 @@ import JSZip from "jszip";
 
 const DEFAULT_BG = "#FFE4E1";
 const DEFAULT_FG = "#1a1a1a";
-const DEFAULT_FONT_SIZE = 72;
+const DEFAULT_FONT_SIZE = 48;
 const CANVAS_SIZE = 1080;
 
 // Aspetta che tutti i font CSS (incluso DM Sans da Google Fonts in index.html)
@@ -45,7 +45,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
   if (currentLine) lines.push(currentLine);
 
   // Auto-shrink se il testo è troppo lungo
-  const lineHeight = fontSize * 1.2;
+  const lineHeight = fontSize * 1.5;
   const totalTextHeight = lines.length * lineHeight;
   const availableHeight = CANVAS_SIZE - padding * 2;
   let adjFontSize = fontSize;
@@ -55,7 +55,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
     ctx.font = `${bold ? "700 " : ""}${adjFontSize}px ${fontStack}`;
   }
 
-  const adjLineH = adjFontSize * 1.2;
+  const adjLineH = adjFontSize * 1.5;
   const totalH = lines.length * adjLineH;
   const startY = (CANVAS_SIZE - totalH) / 2 + adjLineH / 2;
 
@@ -88,12 +88,37 @@ function SlidePreview({ text, bgColor, fgColor, fontSize, bold, index }) {
   );
 }
 
+function LightboxCanvas({ text, bgColor, fgColor, fontSize, bold, onClick }) {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = CANVAS_SIZE;
+    canvas.height = CANVAS_SIZE;
+    const ctx = canvas.getContext("2d");
+    drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold);
+    document.fonts.ready.then(() => {
+      drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold);
+    });
+  }, [text, bgColor, fgColor, fontSize, bold]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      className="lightbox-img"
+      onClick={onClick}
+    />
+  );
+}
+
 export default function App() {
   const [slides, setSlides] = useState([{ id: 1, text: "" }]);
   const [bgColor, setBgColor] = useState(DEFAULT_BG);
   const [fgColor, setFgColor] = useState(DEFAULT_FG);
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
   const [bold, setBold] = useState(false);
+  const [lightbox, setLightbox] = useState(null); // index of expanded slide
   const [isGenerating, setIsGenerating] = useState(false);
   const [status, setStatus] = useState("");
   const nextId = useRef(2);
@@ -512,6 +537,7 @@ export default function App() {
           aspect-ratio: 1;
           border: 1px solid #2a2a2a;
           transition: transform 0.2s;
+          cursor: zoom-in;
         }
 
         .slide-preview-wrapper:hover { transform: scale(1.02); }
@@ -547,6 +573,99 @@ export default function App() {
         }
 
         .divider { height: 1px; background: #2a2a2a; margin: 24px 0; }
+        /* LIGHTBOX */
+        .lightbox-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0, 0, 0, 0.92);
+          z-index: 1000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: zoom-out;
+          animation: fadeIn 0.2s ease;
+          padding: 24px;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+
+        .lightbox-img {
+          max-width: min(90vw, 90vh);
+          max-height: min(90vw, 90vh);
+          width: auto;
+          height: auto;
+          border-radius: 16px;
+          box-shadow: 0 32px 80px rgba(0,0,0,0.8);
+          animation: scaleIn 0.2s ease;
+          cursor: default;
+        }
+
+        @keyframes scaleIn {
+          from { transform: scale(0.92); opacity: 0; }
+          to { transform: scale(1); opacity: 1; }
+        }
+
+        .lightbox-close {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          width: 40px;
+          height: 40px;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 50%;
+          color: #fff;
+          font-size: 20px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s;
+          z-index: 1001;
+        }
+
+        .lightbox-close:hover { background: rgba(255,255,255,0.2); }
+
+        .lightbox-counter {
+          position: fixed;
+          bottom: 24px;
+          left: 50%;
+          transform: translateX(-50%);
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 20px;
+          padding: 6px 16px;
+          font-size: 13px;
+          color: rgba(255,255,255,0.7);
+          backdrop-filter: blur(8px);
+        }
+
+        .lightbox-nav {
+          position: fixed;
+          top: 50%;
+          transform: translateY(-50%);
+          width: 44px;
+          height: 44px;
+          background: rgba(255,255,255,0.1);
+          border: 1px solid rgba(255,255,255,0.2);
+          border-radius: 50%;
+          color: #fff;
+          font-size: 18px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: background 0.15s;
+          z-index: 1001;
+        }
+
+        .lightbox-nav:hover { background: rgba(255,255,255,0.25); }
+        .lightbox-nav.prev { left: 16px; }
+        .lightbox-nav.next { right: 16px; }
+
         .bold-row {
           display: flex;
           align-items: center;
@@ -707,6 +826,7 @@ export default function App() {
             <div className="preview-grid">
               {slides.map((slide, idx) => (
                 slide.text.trim() ? (
+                  <div key={slide.id} onClick={() => setLightbox(idx)} style={{cursor:"zoom-in"}}>
                   <SlidePreview
                     key={`${slide.id}-${bgColor}-${fgColor}-${fontSize}`}
                     text={slide.text}
@@ -716,6 +836,7 @@ export default function App() {
                     bold={bold}
                     index={idx}
                   />
+                  </div>
                 ) : (
                   <div key={slide.id} className="empty-preview">{idx + 1}</div>
                 )
@@ -724,6 +845,46 @@ export default function App() {
           </div>
         </div>
       </div>
+
+      {/* LIGHTBOX */}
+      {lightbox !== null && (() => {
+        const filledSlides = slides.filter((s) => s.text.trim());
+        const total = filledSlides.length;
+        if (total === 0) return null;
+        const idx = Math.min(lightbox, total - 1);
+        const slide = filledSlides[idx];
+        // Get canvas dataURL for lightbox display
+        return (
+          <div
+            className="lightbox-overlay"
+            onClick={() => setLightbox(null)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") setLightbox(null);
+              if (e.key === "ArrowRight") setLightbox((i) => Math.min(i + 1, total - 1));
+              if (e.key === "ArrowLeft") setLightbox((i) => Math.max(i - 1, 0));
+            }}
+            tabIndex={0}
+            ref={(el) => el && el.focus()}
+          >
+            <button className="lightbox-close" onClick={(e) => { e.stopPropagation(); setLightbox(null); }}>×</button>
+            {idx > 0 && (
+              <button className="lightbox-nav prev" onClick={(e) => { e.stopPropagation(); setLightbox(idx - 1); }}>‹</button>
+            )}
+            <LightboxCanvas
+              text={slide.text}
+              bgColor={bgColor}
+              fgColor={fgColor}
+              fontSize={fontSize}
+              bold={bold}
+              onClick={(e) => e.stopPropagation()}
+            />
+            {idx < total - 1 && (
+              <button className="lightbox-nav next" onClick={(e) => { e.stopPropagation(); setLightbox(idx + 1); }}>›</button>
+            )}
+            <div className="lightbox-counter">{idx + 1} / {total}</div>
+          </div>
+        );
+      })()}
     </>
   );
 }
