@@ -64,8 +64,10 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
   });
 }
 
-function SlidePreview({ text, bgColor, fgColor, fontSize, bold, index }) {
+function SlidePreview({ text, bgColor, fgColor, fontSize, bold, fontSizeOverride, boldOverride, index }) {
   const canvasRef = useRef(null);
+  const effFs = fontSizeOverride ?? fontSize;
+  const effBold = boldOverride ?? bold;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -74,11 +76,11 @@ function SlidePreview({ text, bgColor, fgColor, fontSize, bold, index }) {
     canvas.height = CANVAS_SIZE;
     const ctx = canvas.getContext("2d");
 
-    drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold);
+    drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
     document.fonts.ready.then(() => {
-      drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold);
+      drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
     });
-  }, [text, bgColor, fgColor, fontSize, bold]);
+  }, [text, bgColor, fgColor, effFs, effBold]);
 
   return (
     <div className="slide-preview-wrapper">
@@ -88,8 +90,10 @@ function SlidePreview({ text, bgColor, fgColor, fontSize, bold, index }) {
   );
 }
 
-function LightboxCanvas({ text, bgColor, fgColor, fontSize, bold, onClick }) {
+function LightboxCanvas({ text, bgColor, fgColor, fontSize, bold, fontSizeOverride, boldOverride, onClick }) {
   const canvasRef = useRef(null);
+  const effFs = fontSizeOverride ?? fontSize;
+  const effBold = boldOverride ?? bold;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -97,11 +101,11 @@ function LightboxCanvas({ text, bgColor, fgColor, fontSize, bold, onClick }) {
     canvas.width = CANVAS_SIZE;
     canvas.height = CANVAS_SIZE;
     const ctx = canvas.getContext("2d");
-    drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold);
+    drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
     document.fonts.ready.then(() => {
-      drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold);
+      drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
     });
-  }, [text, bgColor, fgColor, fontSize, bold]);
+  }, [text, bgColor, fgColor, effFs, effBold]);
 
   return (
     <canvas
@@ -163,7 +167,7 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
 
   const addSlide = () => {
     if (slides.length >= 15) return;
-    setSlides((prev) => [...prev, { id: nextId.current++, text: "" }]);
+    setSlides((prev) => [...prev, { id: nextId.current++, text: "", fontSizeOverride: null, boldOverride: null }]);
   };
 
   const removeSlide = (id) => {
@@ -173,6 +177,10 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
 
   const updateSlide = (id, text) => {
     setSlides((prev) => prev.map((s) => (s.id === id ? { ...s, text } : s)));
+  };
+
+  const updateSlideField = (id, field, value) => {
+    setSlides((prev) => prev.map((s) => (s.id === id ? { ...s, [field]: value } : s)));
   };
 
   // Genera i blob delle immagini
@@ -185,7 +193,9 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
       canvas.width = CANVAS_SIZE;
       canvas.height = CANVAS_SIZE;
       const ctx = canvas.getContext("2d");
-      drawSlideOnCanvas(ctx, slide.text, bgColor, fgColor, fontSize, bold);
+      const sFs = slide.fontSizeOverride ?? fontSize;
+      const sBold = slide.boldOverride ?? bold;
+      drawSlideOnCanvas(ctx, slide.text, bgColor, fgColor, sFs, sBold);
       const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.95));
       blobs.push(blob);
     }
@@ -207,6 +217,8 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
       const newSlides = phrases.slice(0, 10).map((text, i) => ({
         id: nextId.current++,
         text,
+        fontSizeOverride: null,
+        boldOverride: null,
       }));
       setSlides(newSlides);
       setAiStatus(`✓ ${newSlides.length} frasi generate!`);
@@ -855,6 +867,63 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
           line-height: 1.4;
         }
 
+
+        /* PER-SLIDE OVERRIDES */
+        .slide-overrides {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          margin-top: 5px;
+          padding-left: 34px;
+        }
+
+        .override-btn {
+          background: none;
+          border: 1px solid #2a2a2a;
+          border-radius: 6px;
+          color: #555;
+          font-family: "DM Sans", -apple-system, sans-serif;
+          font-size: 11px;
+          padding: 3px 7px;
+          cursor: pointer;
+          transition: all 0.15s;
+          white-space: nowrap;
+        }
+
+        .override-btn:hover { border-color: #444; color: #888; }
+        .override-btn.active { border-color: #fff; color: #fff; background: #1f1f1f; }
+
+        .override-fs-input {
+          width: 44px;
+          background: #111;
+          border: 1px solid #2a2a2a;
+          border-radius: 6px;
+          color: #fff;
+          font-family: "DM Sans", -apple-system, sans-serif;
+          font-size: 12px;
+          font-weight: 700;
+          padding: 3px 6px;
+          text-align: center;
+          -moz-appearance: textfield;
+        }
+
+        .override-fs-input::-webkit-inner-spin-button,
+        .override-fs-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+        .override-fs-input:focus { outline: none; border-color: #555; }
+
+        .override-reset {
+          background: none;
+          border: none;
+          color: #333;
+          cursor: pointer;
+          font-size: 14px;
+          padding: 0 2px;
+          line-height: 1;
+          transition: color 0.15s;
+        }
+
+        .override-reset:hover { color: #ff6b6b; }
+
         /* AI SECTION */
         .ai-section {
           margin-bottom: 0;
@@ -1027,20 +1096,60 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
               <div className="section-title">Frasi ({slides.length}/15)</div>
               <div className="slides-list">
                 {slides.map((slide, idx) => (
-                  <div key={slide.id} className="slide-input-row">
-                    <div className="slide-num">{idx + 1}</div>
-                    <textarea
-                      className="slide-textarea"
-                      placeholder={`Frase ${idx + 1}...`}
-                      value={slide.text}
-                      rows={2}
-                      onChange={(e) => {
-                        updateSlide(slide.id, e.target.value);
-                        e.target.style.height = "auto";
-                        e.target.style.height = e.target.scrollHeight + "px";
-                      }}
-                    />
-                    <button className="remove-btn" onClick={() => removeSlide(slide.id)} title="Rimuovi">×</button>
+                  <div key={slide.id}>
+                    <div className="slide-input-row">
+                      <div className="slide-num">{idx + 1}</div>
+                      <textarea
+                        className="slide-textarea"
+                        placeholder={`Frase ${idx + 1}...`}
+                        value={slide.text}
+                        rows={2}
+                        onChange={(e) => {
+                          updateSlide(slide.id, e.target.value);
+                          e.target.style.height = "auto";
+                          e.target.style.height = e.target.scrollHeight + "px";
+                        }}
+                      />
+                      <button className="remove-btn" onClick={() => removeSlide(slide.id)} title="Rimuovi">×</button>
+                    </div>
+                    <div className="slide-overrides">
+                      <span style={{fontSize:"10px",color:"#444",letterSpacing:"1px",textTransform:"uppercase"}}>Override:</span>
+                      <input
+                        className="override-fs-input"
+                        type="number"
+                        min={12}
+                        max={150}
+                        placeholder={String(fontSize)}
+                        value={slide.fontSizeOverride ?? ""}
+                        onChange={(e) => updateSlideField(slide.id, "fontSizeOverride", e.target.value ? Number(e.target.value) : null)}
+                        title="Font size per questa slide"
+                      />
+                      <button
+                        className={`override-btn ${slide.boldOverride === true ? "active" : slide.boldOverride === false ? "active" : ""}`}
+                        onClick={() => {
+                          if (slide.boldOverride === null || slide.boldOverride === undefined) {
+                            updateSlideField(slide.id, "boldOverride", !bold);
+                          } else {
+                            updateSlideField(slide.id, "boldOverride", null);
+                          }
+                        }}
+                        title={slide.boldOverride !== null && slide.boldOverride !== undefined ? "Rimuovi override grassetto" : "Imposta override grassetto"}
+                      >
+                        {slide.boldOverride !== null && slide.boldOverride !== undefined
+                          ? slide.boldOverride ? "B ✓" : "B ✗"
+                          : "B"}
+                      </button>
+                      {(slide.fontSizeOverride !== null || (slide.boldOverride !== null && slide.boldOverride !== undefined)) && (
+                        <button
+                          className="override-reset"
+                          onClick={() => {
+                            updateSlideField(slide.id, "fontSizeOverride", null);
+                            updateSlideField(slide.id, "boldOverride", null);
+                          }}
+                          title="Rimuovi tutti gli override"
+                        >↺</button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1076,12 +1185,14 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
                 slide.text.trim() ? (
                   <div key={slide.id} onClick={() => setLightbox(idx)} style={{cursor:"zoom-in"}}>
                   <SlidePreview
-                    key={`${slide.id}-${bgColor}-${fgColor}-${fontSize}`}
+                    key={`${slide.id}-${bgColor}-${fgColor}-${fontSize}-${slide.fontSizeOverride}-${slide.boldOverride}`}
                     text={slide.text}
                     bgColor={bgColor}
                     fgColor={fgColor}
                     fontSize={fontSize}
                     bold={bold}
+                    fontSizeOverride={slide.fontSizeOverride}
+                    boldOverride={slide.boldOverride}
                     index={idx}
                   />
                   </div>
@@ -1124,6 +1235,8 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
               fgColor={fgColor}
               fontSize={fontSize}
               bold={bold}
+              fontSizeOverride={slide.fontSizeOverride}
+              boldOverride={slide.boldOverride}
               onClick={(e) => e.stopPropagation()}
             />
             {idx < total - 1 && (
