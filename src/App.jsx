@@ -64,7 +64,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
   });
 }
 
-function SlidePreview({ text, bgColor, fgColor, fontSize, bold, fontSizeOverride, boldOverride, index }) {
+function SlidePreview({ text, bgColor, fgColor, fontSize, bold, fontSizeOverride, boldOverride, index, onDownload }) {
   const canvasRef = useRef(null);
   const effFs = fontSizeOverride ?? fontSize;
   const effBold = boldOverride ?? bold;
@@ -86,6 +86,13 @@ function SlidePreview({ text, bgColor, fgColor, fontSize, bold, fontSizeOverride
     <div className="slide-preview-wrapper">
       <div className="slide-number">{index + 1}</div>
       <canvas ref={canvasRef} className="slide-canvas" />
+      {onDownload && (
+        <button
+          className="slide-dl-btn"
+          onClick={(e) => { e.stopPropagation(); onDownload(); }}
+          title="Scarica questa slide"
+        >↓</button>
+      )}
     </div>
   );
 }
@@ -230,6 +237,38 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
       setTimeout(() => setAiStatus(""), 4000);
     }
   }, [aiPrompt]);
+
+  const downloadSingle = useCallback(async (slide, idx) => {
+    await ensureFontLoaded();
+    const canvas = document.createElement("canvas");
+    canvas.width = CANVAS_SIZE;
+    canvas.height = CANVAS_SIZE;
+    const ctx = canvas.getContext("2d");
+    const sFs = slide.fontSizeOverride ?? fontSize;
+    const sBold = slide.boldOverride ?? bold;
+    drawSlideOnCanvas(ctx, slide.text, bgColor, fgColor, sFs, sBold);
+
+    const blob = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.95));
+    const file = new File([blob], `slide_${String(idx + 1).padStart(2, "0")}.jpg`, { type: "image/jpeg" });
+
+    // Web Share su mobile se supportato
+    if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file] });
+        return;
+      } catch (e) {
+        if (e.name === "AbortError") return;
+      }
+    }
+
+    // Fallback: download diretto
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [bgColor, fgColor, fontSize, bold]);
 
   const generateAndDownload = useCallback(async () => {
     const filledSlides = slides.filter((s) => s.text.trim());
@@ -924,6 +963,40 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
 
         .override-reset:hover { color: #ff6b6b; }
 
+
+        /* SINGLE DOWNLOAD BUTTON ON PREVIEW */
+        .slide-preview-wrapper {
+          position: relative;
+        }
+
+        .slide-dl-btn {
+          position: absolute;
+          bottom: 8px;
+          right: 8px;
+          width: 30px;
+          height: 30px;
+          background: rgba(0,0,0,0.55);
+          border: 1px solid rgba(255,255,255,0.15);
+          border-radius: 8px;
+          color: #fff;
+          font-size: 14px;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          backdrop-filter: blur(6px);
+          opacity: 0;
+          transition: opacity 0.15s, background 0.15s;
+          z-index: 2;
+        }
+
+        .slide-preview-wrapper:hover .slide-dl-btn { opacity: 1; }
+        .slide-dl-btn:hover { background: rgba(0,0,0,0.8); }
+
+        @media (max-width: 900px) {
+          .slide-dl-btn { opacity: 1; }
+        }
+
         /* AI SECTION */
         .ai-section {
           margin-bottom: 0;
@@ -1181,9 +1254,13 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
               <span className="preview-count">Aggiornamento in tempo reale</span>
             </div>
             <div className="preview-grid">
-              {slides.map((slide, idx) => (
-                slide.text.trim() ? (
-                  <div key={slide.id} onClick={() => setLightbox(idx)} style={{cursor:"zoom-in"}}>
+              {(() => {
+                let filledIdx = -1;
+                return slides.map((slide, idx) => {
+                  if (slide.text.trim()) filledIdx++;
+                  const fi = filledIdx;
+                  return slide.text.trim() ? (
+                  <div key={slide.id} onClick={() => setLightbox(fi)} style={{cursor:"zoom-in"}}>
                   <SlidePreview
                     key={`${slide.id}-${bgColor}-${fgColor}-${fontSize}-${slide.fontSizeOverride}-${slide.boldOverride}`}
                     text={slide.text}
@@ -1193,13 +1270,15 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
                     bold={bold}
                     fontSizeOverride={slide.fontSizeOverride}
                     boldOverride={slide.boldOverride}
-                    index={idx}
+                    index={fi}
+                    onDownload={() => downloadSingle(slide, fi)}
                   />
                   </div>
                 ) : (
                   <div key={slide.id} className="empty-preview">{idx + 1}</div>
-                )
-              ))}
+                );
+                });
+              })()}
             </div>
           </div>
         </div>
