@@ -3,7 +3,7 @@ import JSZip from "jszip";
 
 const DEFAULT_BG = "#FFE4E1";
 const DEFAULT_FG = "#1a1a1a";
-const DEFAULT_FONT_SIZE = 48;
+const DEFAULT_FONT_SIZE = 74;
 const CANVAS_SIZE = 1080;
 
 // Aspetta che tutti i font CSS (incluso DM Sans da Google Fonts in index.html)
@@ -45,7 +45,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
   if (currentLine) lines.push(currentLine);
 
   // Auto-shrink se il testo è troppo lungo
-  const lineHeight = fontSize * 1.5;
+  const lineHeight = fontSize * 1.2;
   const totalTextHeight = lines.length * lineHeight;
   const availableHeight = CANVAS_SIZE - padding * 2;
   let adjFontSize = fontSize;
@@ -55,7 +55,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
     ctx.font = `${bold ? "700 " : ""}${adjFontSize}px ${fontStack}`;
   }
 
-  const adjLineH = adjFontSize * 1.5;
+  const adjLineH = adjFontSize * 1.2;
   const totalH = lines.length * adjLineH;
   const startY = (CANVAS_SIZE - totalH) / 2 + adjLineH / 2;
 
@@ -120,6 +120,11 @@ export default function App() {
   const [bold, setBold] = useState(false);
   const [lightbox, setLightbox] = useState(null); // index of expanded slide
   const [isGenerating, setIsGenerating] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [systemPrompt, setSystemPrompt] = useState("Genera 10 frasi sarcastiche, ironiche e pungenti in italiano. Ogni frase deve essere breve (max 15 parole), adatta a una slide Instagram, e deve colpire con ironia o sarcasmo. Sii creativa e originale.");
+  const [showSystemPrompt, setShowSystemPrompt] = useState(false);
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
+  const [aiStatus, setAiStatus] = useState("");
   const [status, setStatus] = useState("");
   const nextId = useRef(2);
 
@@ -153,6 +158,38 @@ export default function App() {
     }
     return blobs;
   };
+
+  const generateWithAI = useCallback(async () => {
+    if (!aiPrompt.trim()) {
+      setAiStatus("Descrivi il tema prima!");
+      setTimeout(() => setAiStatus(""), 3000);
+      return;
+    }
+    setIsGeneratingAI(true);
+    setAiStatus("Gemini sta scrivendo...");
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: aiPrompt, systemPrompt }),
+      });
+      if (!res.ok) throw new Error(await res.text());
+      const { phrases } = await res.json();
+      // Sostituisce le slide con le frasi generate (max 10)
+      const newSlides = phrases.slice(0, 10).map((text, i) => ({
+        id: nextId.current++,
+        text,
+      }));
+      setSlides(newSlides);
+      setAiStatus(`✓ ${newSlides.length} frasi generate!`);
+    } catch (err) {
+      console.error(err);
+      setAiStatus("Errore. Controlla la API key su Vercel.");
+    } finally {
+      setIsGeneratingAI(false);
+      setTimeout(() => setAiStatus(""), 4000);
+    }
+  }, [aiPrompt]);
 
   const generateAndDownload = useCallback(async () => {
     const filledSlides = slides.filter((s) => s.text.trim());
@@ -719,6 +756,135 @@ export default function App() {
           font-weight: 700;
         }
 
+
+        /* SYSTEM PROMPT */
+        .sp-toggle {
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          background: none;
+          border: none;
+          color: #555;
+          font-family: "DM Sans", -apple-system, sans-serif;
+          font-size: 11px;
+          font-weight: 600;
+          letter-spacing: 1.5px;
+          text-transform: uppercase;
+          cursor: pointer;
+          padding: 0;
+          margin-bottom: 12px;
+          transition: color 0.15s;
+          width: 100%;
+          text-align: left;
+          justify-content: space-between;
+        }
+
+        .sp-toggle:hover { color: #888; }
+
+        .sp-toggle .sp-arrow {
+          font-size: 10px;
+          transition: transform 0.2s;
+          display: inline-block;
+        }
+
+        .sp-toggle.open .sp-arrow { transform: rotate(180deg); }
+
+        .sp-box {
+          background: #0d0d0d;
+          border: 1px solid #2a2a2a;
+          border-radius: 10px;
+          overflow: hidden;
+          max-height: 0;
+          transition: max-height 0.3s ease, opacity 0.2s;
+          opacity: 0;
+        }
+
+        .sp-box.open {
+          max-height: 300px;
+          opacity: 1;
+        }
+
+        .sp-textarea {
+          width: 100%;
+          background: transparent;
+          border: none;
+          color: #c0c0c0;
+          font-family: "DM Sans", -apple-system, sans-serif;
+          font-size: 12px;
+          line-height: 1.6;
+          padding: 12px;
+          resize: none;
+          min-height: 100px;
+        }
+
+        .sp-textarea:focus { outline: none; }
+        .sp-textarea::placeholder { color: #444; }
+
+        .sp-hint {
+          padding: 0 12px 10px;
+          font-size: 11px;
+          color: #444;
+          line-height: 1.4;
+        }
+
+        /* AI SECTION */
+        .ai-section {
+          margin-bottom: 0;
+        }
+
+        .ai-input-row {
+          display: flex;
+          gap: 8px;
+          align-items: flex-start;
+        }
+
+        .ai-textarea {
+          flex: 1;
+          background: #111;
+          border: 1px solid #2a2a2a;
+          border-radius: 10px;
+          color: #f0f0f0;
+          font-family: "DM Sans", -apple-system, sans-serif;
+          font-size: 13px;
+          line-height: 1.5;
+          padding: 10px 12px;
+          resize: none;
+          min-height: 44px;
+          transition: border-color 0.2s;
+        }
+
+        .ai-textarea:focus { outline: none; border-color: #444; }
+        .ai-textarea::placeholder { color: #444; }
+
+        .ai-btn {
+          padding: 10px 16px;
+          background: linear-gradient(135deg, #4f8ef7, #7c5cbf);
+          color: #fff;
+          border: none;
+          border-radius: 10px;
+          font-family: "DM Sans", -apple-system, sans-serif;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          white-space: nowrap;
+          transition: opacity 0.2s, transform 0.15s;
+          flex-shrink: 0;
+        }
+
+        .ai-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+        .ai-btn:active { transform: translateY(0); }
+        .ai-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+        .ai-status {
+          font-size: 12px;
+          color: #666;
+          margin-top: 8px;
+          min-height: 18px;
+          text-align: center;
+        }
+
+        .ai-status.success { color: #6bcb6b; }
+
       `}</style>
 
       <div className="app">
@@ -771,6 +937,60 @@ export default function App() {
                 />
                 <span className="bold-label">Grassetto</span>
               </label>
+            </div>
+
+            <div className="divider" />
+
+            <div className="control-group ai-section">
+              <div className="section-title">✦ Genera con AI</div>
+
+              {/* System prompt collapsible */}
+              <button
+                className={`sp-toggle ${showSystemPrompt ? "open" : ""}`}
+                onClick={() => setShowSystemPrompt((v) => !v)}
+              >
+                <span>System prompt</span>
+                <span className="sp-arrow">▼</span>
+              </button>
+              <div className={`sp-box ${showSystemPrompt ? "open" : ""}`}>
+                <textarea
+                  className="sp-textarea"
+                  placeholder="Definisci stile, tono e formato delle frasi..."
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
+                />
+                <div className="sp-hint">
+                  Queste istruzioni vengono inviate a Gemini ad ogni generazione.
+                  Il campo "tema" qui sotto aggiunge il contesto specifico.
+                </div>
+              </div>
+
+              {/* Prompt + generate button */}
+              <div className="ai-input-row" style={{marginTop: "12px"}}>
+                <textarea
+                  className="ai-textarea"
+                  placeholder="Tema o contesto opzionale... (es. lunedì mattina)"
+                  value={aiPrompt}
+                  rows={2}
+                  onChange={(e) => {
+                    setAiPrompt(e.target.value);
+                    e.target.style.height = "auto";
+                    e.target.style.height = e.target.scrollHeight + "px";
+                  }}
+                />
+                <button
+                  className="ai-btn"
+                  onClick={generateWithAI}
+                  disabled={isGeneratingAI}
+                >
+                  {isGeneratingAI ? "..." : "Genera"}
+                </button>
+              </div>
+              {aiStatus && (
+                <div className={`ai-status ${aiStatus.startsWith("✓") ? "success" : ""}`}>
+                  {aiStatus}
+                </div>
+              )}
             </div>
 
             <div className="divider" />
