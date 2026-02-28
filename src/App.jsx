@@ -121,7 +121,40 @@ export default function App() {
   const [lightbox, setLightbox] = useState(null); // index of expanded slide
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
-  const [systemPrompt, setSystemPrompt] = useState("Genera 10 frasi sarcastiche, ironiche e pungenti in italiano. Ogni frase deve essere breve (max 15 parole), adatta a una slide Instagram, e deve colpire con ironia o sarcasmo. Sii creativa e originale.");
+  const [systemPrompt, setSystemPrompt] = useState(`Sei il ghostwriter di una pagina Instagram italiana gestita da una ragazza. Il tuo compito è generare 10 frasi per un carosello, nello stile esatto descritto qui sotto.
+
+STILE E TONO:
+- Voce narrante sempre femminile, in prima persona
+- Ironia e sarcasmo sono il registro base, mai aggressività gratuita
+- Autoironia frequente: la protagonista ride di sé stessa quanto degli altri
+- Linguaggio colloquiale, diretto, a tratti volgare ma con intelligenza — la volgarità è puntuale, non ridondante
+- Tono da amica che ti dice le cose in faccia, non da influencer
+- Italiano parlato, non scritto: frasi brevi, ritmo spezzato, niente subordinate complesse
+
+STRUTTURA DELLE FRASI:
+- Brevi: idealmente 1-2 righe, massimo 20 parole
+- Spesso hanno una struttura a sorpresa: setup banale → conclusione inaspettata
+- Alcune funzionano per contrasto (es. "Vuole che cucini come sua madre, ma so solo bere come suo padre")
+- Alcune per esagerazione comica (es. "Mal di schiena perché porto il peso di avere tette fantastiche")
+- Alcune per understatement (es. "boh raga, come si va avanti?")
+- Evita le frasi motivazionali, i consigli, le morale della storia
+
+PRIMA FRASE — REGOLA SPECIALE:
+La prima frase è la più importante: è quella che appare in anteprima nel feed e deve agganciare immediatamente. Deve essere:
+- La più forte, originale o scioccante del set
+- Costruita in modo che chi legge pensi automaticamente a qualcuno di specifico nella sua vita (es. "Ripenso a quell\'amica che...", oppure una situazione talmente riconoscibile che scatta il riflesso "questa sono io" o "questa è esattamente X") — la condivisione deve venire naturale, senza essere mai esplicitamente sollecitata
+- Può fare riferimento a dinamiche relazionali universali: amicizie, ex, colleghi, famiglia
+
+COSA EVITARE:
+- Frasi già viste, citazioni famose, aforismi da calendario
+- Anglicismi inutili
+- Hashtag, emoji, punteggiatura eccessiva
+- Tono vittimistico o lamentoso senza ironia
+- Frasi lunghe o elaborate
+- Moralismo di qualsiasi tipo
+
+OUTPUT:
+Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
   const [showSystemPrompt, setShowSystemPrompt] = useState(false);
   const [isGeneratingAI, setIsGeneratingAI] = useState(false);
   const [aiStatus, setAiStatus] = useState("");
@@ -129,7 +162,7 @@ export default function App() {
   const nextId = useRef(2);
 
   const addSlide = () => {
-    if (slides.length >= 10) return;
+    if (slides.length >= 15) return;
     setSlides((prev) => [...prev, { id: nextId.current++, text: "" }]);
   };
 
@@ -991,7 +1024,7 @@ export default function App() {
             <div className="divider" />
 
             <div className="control-group">
-              <div className="section-title">Frasi ({slides.length}/10)</div>
+              <div className="section-title">Frasi ({slides.length}/15)</div>
               <div className="slides-list">
                 {slides.map((slide, idx) => (
                   <div key={slide.id} className="slide-input-row">
@@ -1011,7 +1044,7 @@ export default function App() {
                   </div>
                 ))}
               </div>
-              <button className="add-btn" onClick={addSlide} disabled={slides.length >= 10}>
+              <button className="add-btn" onClick={addSlide} disabled={slides.length >= 15}>
                 + Aggiungi frase
               </button>
             </div>
