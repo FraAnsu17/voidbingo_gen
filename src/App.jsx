@@ -160,11 +160,6 @@ export default function App() {
   };
 
   const generateWithAI = useCallback(async () => {
-    if (!aiPrompt.trim()) {
-      setAiStatus("Descrivi il tema prima!");
-      setTimeout(() => setAiStatus(""), 3000);
-      return;
-    }
     setIsGeneratingAI(true);
     setAiStatus("Gemini sta scrivendo...");
     try {
