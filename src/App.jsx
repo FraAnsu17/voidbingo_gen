@@ -1059,7 +1059,7 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
 
       <div className="app">
         <div className="header">
-          <h1>Carousel Generator</h1>
+          <h1>Voidbingo Generator</h1>
           <p>Crea le slide del tuo carosello Instagram in un click</p>
         </div>
 
