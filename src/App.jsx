@@ -26,7 +26,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
   const padding = CANVAS_SIZE * 0.12;
   const maxWidth = CANVAS_SIZE - padding * 2;
 
-  ctx.font = `${bold ? "700 " : ""}${fontSize}px ${fontStack}`;
+  ctx.font = `${bold ? "900 " : ""}${fontSize}px ${fontStack}`;
 
   // Word wrap
   const words = text.split(" ");
