@@ -6,10 +6,16 @@ const DEFAULT_FG = "#1a1a1a";
 const DEFAULT_FONT_SIZE = 74;
 const CANVAS_SIZE = 1080;
 
-// Aspetta che tutti i font CSS (incluso DM Sans da Google Fonts in index.html)
-// siano pronti anche per il Canvas
+// Carica i font locali InstagramSans nel documento (necessario per il Canvas)
+let fontsLoaded = false;
 async function ensureFontLoaded() {
-  await document.fonts.ready;
+  if (fontsLoaded) return;
+  const regular = new FontFace("InstagramSans", "url(/src/fonts/InstagramSans.ttf)", { weight: "400" });
+  const bold = new FontFace("InstagramSans", "url(/src/fonts/InstagramSansBold.ttf)", { weight: "700" });
+  await Promise.all([regular.load(), bold.load()]);
+  document.fonts.add(regular);
+  document.fonts.add(bold);
+  fontsLoaded = true;
 }
 
 function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) {
@@ -18,7 +24,7 @@ function drawSlideOnCanvas(ctx, text, bgColor, fgColor, fontSize, bold = false) 
 
   if (!text.trim()) return;
 
-  const fontStack = `"DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`;
+  const fontStack = `"InstagramSans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif`;
   ctx.fillStyle = fgColor;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -77,7 +83,7 @@ function SlidePreview({ text, bgColor, fgColor, fontSize, bold, fontSizeOverride
     const ctx = canvas.getContext("2d");
 
     drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
-    document.fonts.ready.then(() => {
+    ensureFontLoaded().then(() => {
       drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
     });
   }, [text, bgColor, fgColor, effFs, effBold]);
@@ -109,7 +115,7 @@ function LightboxCanvas({ text, bgColor, fgColor, fontSize, bold, fontSizeOverri
     canvas.height = CANVAS_SIZE;
     const ctx = canvas.getContext("2d");
     drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
-    document.fonts.ready.then(() => {
+    ensureFontLoaded().then(() => {
       drawSlideOnCanvas(ctx, text, bgColor, fgColor, effFs, effBold);
     });
   }, [text, bgColor, fgColor, effFs, effBold]);
@@ -128,7 +134,7 @@ export default function App() {
   const [bgColor, setBgColor] = useState(DEFAULT_BG);
   const [fgColor, setFgColor] = useState(DEFAULT_FG);
   const [fontSize, setFontSize] = useState(DEFAULT_FONT_SIZE);
-  const [bold, setBold] = useState(false);
+  const [bold, setBold] = useState(true);
   const [lightbox, setLightbox] = useState(null); // index of expanded slide
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -338,7 +344,7 @@ Rispondi SOLO con un array JSON di 10 stringhe. Nessun altro testo.`);
         body {
           background: #0f0f0f;
           color: #f0f0f0;
-          font-family: "DM Sans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
+          font-family: "InstagramSans", -apple-system, BlinkMacSystemFont, "Helvetica Neue", sans-serif;
           min-height: 100vh;
         }
 
