@@ -10,8 +10,8 @@ const CANVAS_SIZE = 1080;
 let fontsLoaded = false;
 async function ensureFontLoaded() {
   if (fontsLoaded) return;
-  const regular = new FontFace("InstagramSans", "url(/src/fonts/InstagramSans.ttf)", { weight: "400" });
-  const bold = new FontFace("InstagramSans", "url(/src/fonts/InstagramSansBold.ttf)", { weight: "700" });
+  const regular = new FontFace("InstagramSans", "url(/fonts/InstagramSans.ttf)", { weight: "400" });
+  const bold = new FontFace("InstagramSans", "url(/fonts/InstagramSansBold.ttf)", { weight: "700" });
   await Promise.all([regular.load(), bold.load()]);
   document.fonts.add(regular);
   document.fonts.add(bold);
